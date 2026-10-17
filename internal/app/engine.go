@@ -138,7 +138,13 @@ func (e *Engine) Toggle(ctx context.Context) (State, string, error) {
 	case StateFinishing:
 		return StateFinishing, "", nil
 	default:
-		return StateRecording, "", e.start(ctx)
+		if err := e.start(ctx); err != nil {
+			// CLI çalışırken hatanın nasıl görüldüğü önemli; tray tıklaması
+			// sessiz kalmasın diye başarısızlığı bildir.
+			e.notify("Kayıt başlatılamadı", err.Error())
+			return StateIdle, "", err
+		}
+		return StateRecording, "", nil
 	}
 }
 
@@ -168,7 +174,6 @@ func (e *Engine) start(ctx context.Context) error {
 	if hook != nil {
 		hook(StateRecording)
 	}
-	e.notify("Kayıt başladı", "Dictatego dinliyor — bind ile bitir ya da cancel")
 	return nil
 }
 
@@ -219,8 +224,6 @@ func (e *Engine) stopAndFinalize(ctx context.Context) (string, error) {
 		} else {
 			e.notify("Panoya kopyalandı", "Yapıştırılamadı — manuel yapıştır: "+short(final))
 		}
-	} else {
-		e.notify("Yapıştırıldı", short(final))
 	}
 	return final, nil
 }
@@ -241,7 +244,6 @@ func (e *Engine) Cancel(ctx context.Context) {
 		sess.Cancel(ctx)
 	}
 	e.rec.Stop()
-	e.notify("İptal", "Kayıt silindi")
 }
 
 // resToPairs converts stored dictionary pairs, tolerating nil.
