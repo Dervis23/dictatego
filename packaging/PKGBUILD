@@ -1,0 +1,39 @@
+# Maintainer: gauss
+# Dictatego — Wayland (wlroots/Hyprland) tray diktasyon uygulaması,
+# Gemini Live API ile konuşmayı yazıya döker ve odaklı pencereye yapıştırır.
+pkgname=dictatego-git
+pkgver=0.1.0.r1.4f88afdd
+pkgrel=1
+pkgdesc="Hotkey dictation for Wayland: mic → Gemini Live → paste into focused window"
+arch=('x86_64' 'aarch64')
+url="https://github.com/FILL-ME/dictatego"
+license=('MIT')
+makedepends=('go' 'git')
+depends=('wtype' 'wl-clipboard' 'libnotify')
+optdepends=('ydotool: paste fallback (daemon gerektirir)')
+provides=('dictatego')
+conflicts=('dictatego')
+source=("git+${url}.git")
+sha256sums=('SKIP')
+pkgver() {
+  cd dictatego
+  printf "0.1.0.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cd dictatego
+  export CGO_ENABLED=0
+  go build -trimpath -ldflags "-s -w" -o dictatego ./cmd/dictatego
+}
+
+check() {
+  cd dictatego
+  go test ./...
+}
+
+package() {
+  cd dictatego
+  install -Dm755 dictatego -t "$pkgdir/usr/bin/"
+  install -Dm644 packaging/dictatego.service "$pkgdir/usr/lib/systemd/user/dictatego.service"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

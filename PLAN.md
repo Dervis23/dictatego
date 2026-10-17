@@ -85,7 +85,11 @@ bekliyor (bind sorunu çözülürse opsiyonel olur).
       İkon (kullanıcı seçimi): boşta minik gri daire (#9e9e9e, 16px),
       kayıtta turuncu kare (#ff9800, 20×20)
 - Kullanıcı kendi Hyprland bind'larını kendisi ayarlayacak (install-hyprland gereksiz)
-- [ ] çeviri modu daemon üzerinden (config'den language okur)
+- [x] ayar komutları: `set language|mode|style|microphone` + `get` + `dict add|remove|list`
+      (kullanıcı config.json elle düzenlemiyor; engine her kayıtta config'i yeniden okur)
+- [x] çeviri modu daemon üzerinden (config'den language okur) — engine artık
+      cfg.Language'ı gemini.New'a geçiyor; dil doluysa translate modeli seçilir.
+      Canlı konuşma testi kullanıcı isteğiyle atlandı.
 
 ### Faz 3 — Metin yapıştırma (GUI'siz çekirdek tamamlayıcı)
 - [x] paste: kullanıcı sisteminde hazır araçlar saptandı (wtype + wl-copy; ydotool daemon kapalı → sadece yedek)
@@ -93,8 +97,8 @@ bekliyor (bind sorunu çözülürse opsiyonel olur).
 - [ ] kendi wlr istemcisi (data-control + virtual keyboard): araçlar her yerde yoksa; şart değil, yedekte
 
 ### Faz 4 — UX / özellik tamamlama
-- [ ] config komutları: `dictatego set key|language|mode|device|dictionary`
-- [ ] Dictionary motoru devreye alındı: ✔ (Faz 1'de tamamlandı, testli)
+- [x] config komutları: `dictatego set language|mode|style|microphone` + `get` + `dict add|remove|list`
+- [x] Dictionary motoru devreye alındı: ✔ (Faz 1'de tamamlandı, testli; `dict` komutuyla CLI'dan yönetilir)
 - [ ] self-update: GitHub release + checksum doğrulama
 - [ ] hold-to-talk: daemon.tabi? basılı tutma modu (config.style=hold)
 - [ ] single-instance: socket zaten çakışmayı engeller

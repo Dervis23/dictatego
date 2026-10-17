@@ -1,0 +1,15 @@
+[Unit]
+Description=Dictatego — Wayland tray dictation daemon
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/dictatego run
+Restart=on-failure
+RestartSec=2
+# config.json 0600 ile okunur; hiçbir ek yetki gerekmez
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=graphical-session.target
