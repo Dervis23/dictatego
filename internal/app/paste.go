@@ -46,5 +46,3 @@ func runTool(name string, args ...string) error {
 type toolMissing struct{ name string }
 
 func (e toolMissing) Error() string { return e.name + " kurulu değil" }
-
-func errToolMissing(name string) error { return toolMissing{name} }

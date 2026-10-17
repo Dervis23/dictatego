@@ -40,6 +40,10 @@ type Engine struct {
 	state   State
 	preview string
 
+	// flowMu serializes the start/stop flows: a double keybind press plus a
+	// tray click must not open two mic/session pairs (or two stops).
+	flowMu sync.Mutex
+
 	paste  PasteFunc
 	notify func(summary, body string)
 	hook   func(State)
@@ -56,19 +60,8 @@ func (e *Engine) SetStateHook(f func(State)) {
 	}
 }
 
-func (e *Engine) transition(st State) {
-	e.mu.Lock()
-	prev := e.state
-	e.state = st
-	hook := e.hook
-	e.mu.Unlock()
-	if hook != nil && prev != st {
-		hook(st)
-	}
-}
-
-// New builds the engine with notify-send as reporter and clipboard-copy
-// as default paste helper until the real injector lands.
+// New builds the engine with notify-send as reporter and the tool-injection
+// paste chain.
 func New(cfg *config.Config) *Engine {
 	e := &Engine{
 		cfg:    cfg,
@@ -90,8 +83,12 @@ func (e *Engine) SetPasteFunc(f PasteFunc) {
 // SetNotifier swaps the reporter (tests inject a capture).
 func (e *Engine) SetNotifier(f func(summary, body string)) { e.notify = f }
 
-// Config returns the live config snapshot.
-func (e *Engine) Config() *config.Config { return e.cfg }
+// Config returns the live config snapshot (ReloadConfig swaps it under lock).
+func (e *Engine) Config() *config.Config {
+	e.reloadMu.Lock()
+	defer e.reloadMu.Unlock()
+	return e.cfg
+}
 
 // ReloadConfig re-reads settings from disk (a `set` may have changed them).
 func (e *Engine) ReloadConfig() error {
@@ -128,6 +125,11 @@ func (e *Engine) State() (State, string) {
 // Toggle starts recording, or — when already recording — stops and
 // finalizes exactly like a press-to-toggle hotkey.
 func (e *Engine) Toggle(ctx context.Context) (State, string, error) {
+	// Sıraya gir: çift bind basışı + tray tıklaması aynı anda iki akış
+	// başlatamaz (iki mikrofon/oturum açma veya çift stop).
+	e.flowMu.Lock()
+	defer e.flowMu.Unlock()
+
 	e.mu.Lock()
 	st := e.state
 	e.mu.Unlock()
@@ -194,11 +196,16 @@ func (e *Engine) stopAndFinalize(ctx context.Context) (string, error) {
 	text, err := sess.Finish(ctx)
 
 	e.mu.Lock()
-	e.sess = nil
-	e.state = StateIdle
-	e.preview = ""
+	// Bu oturum hâlâ aktifse (arasında cancel→yeni kayıt başlamadıysa)
+	// geçişi yap; aksi halde yeni oturumu ezmemek için dokunma.
+	hadHook := false
+	if e.sess == sess {
+		e.sess = nil
+		e.state = StateIdle
+		e.preview = ""
+		hadHook = e.hook != nil
+	}
 	hook := e.hook
-	hadHook := hook != nil
 	e.mu.Unlock()
 
 	if hadHook {
@@ -229,21 +236,37 @@ func (e *Engine) stopAndFinalize(ctx context.Context) (string, error) {
 }
 
 // Cancel discards the running session with no paste and no error report.
+// Pressed during finalize it aborts the pending result too.
 func (e *Engine) Cancel(ctx context.Context) {
 	e.mu.Lock()
+	st := e.state
 	sess := e.sess
-	e.state = StateIdle
-	e.sess = nil
-	e.preview = ""
+	switch st {
+	case StateRecording:
+		e.state = StateIdle
+		e.sess = nil
+		e.preview = ""
+	case StateFinishing:
+		// stopAndFinalize kendi oturumunu serbest bırakacak; biz sadece
+		// sonucu nakin hale getiriyoruz.
+	}
 	hook := e.hook
 	e.mu.Unlock()
-	if hook != nil {
-		hook(StateIdle)
+
+	switch st {
+	case StateRecording:
+		if hook != nil {
+			hook(StateIdle)
+		}
+		if sess != nil {
+			sess.Cancel(ctx)
+		}
+		e.rec.Stop()
+	case StateFinishing:
+		if sess != nil {
+			sess.Cancel(ctx) // Finish ErrCancelled döndürür → paste atlanır
+		}
 	}
-	if sess != nil {
-		sess.Cancel(ctx)
-	}
-	e.rec.Stop()
 }
 
 // resToPairs converts stored dictionary pairs, tolerating nil.
