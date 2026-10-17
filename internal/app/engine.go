@@ -148,7 +148,8 @@ func (e *Engine) start(ctx context.Context) error {
 		return err
 	}
 	cfg := e.Config()
-	session := gemini.New(cfg.APIKey, "", gemini.ModeFromConfig(cfg.Transcription))
+	// Non-empty language selects the translate model with the given target.
+	session := gemini.New(cfg.APIKey, cfg.Language, gemini.ModeFromConfig(cfg.Transcription))
 	if err := session.Start(ctx); err != nil {
 		return err
 	}

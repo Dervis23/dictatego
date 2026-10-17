@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strings"
 	"time"
 
 	"dictatego/internal/app"
@@ -67,6 +68,12 @@ func main() {
 		}
 		fatal(app.PasteWithTools(rest[0]))
 		fmt.Println("yapıştırma tamam")
+	case "set":
+		runSet(rest)
+	case "get":
+		runGet(cfg)
+	case "dict":
+		runDict(rest, cfg)
 	default:
 		usage()
 		os.Exit(2)
@@ -146,8 +153,145 @@ func usage() {
   dictatego cancel            daemon: kaydı at
   dictatego status            daemon durumu
   dictatego overlay [metin]   altyazı bar gösterim testi (deneysel, Wayland)
-  dictatego paste "metin"    odak pencereye metin yazar (test)
+  dictatego paste "metin"     odak pencereye metin yazar (test)
+  dictatego set <alan> <değer>
+                              ayarları günceller: language, mode, style,
+                              microphone (bir sonraki kayıtta geçerli)
+  dictatego get               ayarların özeti
+  dictatego dict add <öğe> <yazım>   sözlüğe kelime ekle
+  dictatego dict remove <öğe>        sözlükten kelime çıkar
+  dictatego dict list               sözlüğü listele
   dictatego version`)
+}
+
+// runSet updates one config field from the CLI ('set language off' clears).
+func runSet(args []string) {
+	if len(args) < 2 {
+		fmt.Fprintln(os.Stderr, "kullanım: dictatego set <language|mode|style|microphone> <değer>")
+		os.Exit(2)
+	}
+	field := args[0]
+	val := strings.Join(args[1:], " ")
+	cfg, err := config.Load()
+	fatal(err)
+	switch field {
+	case "language":
+		if val == "off" || val == "none" {
+			val = ""
+		}
+		cfg.Language = val
+	case "mode", "transcription":
+		switch val {
+		case "smart", "verbatim":
+			cfg.Transcription = val
+		default:
+			fmt.Fprintln(os.Stderr, "mode: 'smart' ya da 'verbatim' olmalı")
+			os.Exit(2)
+		}
+	case "style":
+		switch val {
+		case "toggle", "hold":
+			cfg.Style = val
+		default:
+			fmt.Fprintln(os.Stderr, "style: 'toggle' ya da 'hold' olmalı")
+			os.Exit(2)
+		}
+	case "microphone":
+		if val == "off" || val == "default" {
+			val = ""
+		}
+		cfg.Microphone = val
+	default:
+		fmt.Fprintf(os.Stderr, "bilinmeyen alan: %s (language, mode, style, microphone)\n", field)
+		os.Exit(2)
+	}
+	fatal(cfg.Save())
+	fmt.Printf("%s = %q yazıldı — bir sonraki kayıtta geçerli\n", field, val)
+}
+
+// runGet prints a short settings summary (API key redacted).
+func runGet(cfg *config.Config) {
+	key := "yok"
+	if cfg.APIKey != "" {
+		key = "tanımlı"
+	}
+	fmt.Printf("api_key:       %s\n", key)
+	fmt.Printf("language:      %q (çeviri %s)\n", cfg.Language, onOff(cfg.Language != ""))
+	fmt.Printf("mode:          %s\n", cfg.Transcription)
+	fmt.Printf("style:         %s\n", cfg.Style)
+	fmt.Printf("microphone:    %q\n", cfg.Microphone)
+	fmt.Printf("dictionary:    %d öğe\n", len(cfg.Dictionary))
+}
+
+func onOff(b bool) string {
+	if b {
+		return "açık"
+	}
+	return "kapalı"
+}
+
+// runDict manipulates dictionary pairs and persists them.
+func runDict(args []string, cfg *config.Config) {
+	if len(args) == 0 {
+		runDictList(cfg)
+		return
+	}
+	switch args[0] {
+	case "list":
+		runDictList(cfg)
+	case "add":
+		if len(args) < 3 {
+			fmt.Fprintln(os.Stderr, "kullanım: dictatego dict add <öğe> <yazım>")
+			os.Exit(2)
+		}
+		match, replace := args[1], strings.Join(args[2:], " ")
+		for _, p := range cfg.Dictionary {
+			if p.Match == match {
+				fmt.Printf("zaten var: %q → %q (değiştirilmedi)\n", p.Match, p.Replace)
+				return
+			}
+		}
+		cfg.Dictionary = append(cfg.Dictionary, config.Pair{Match: match, Replace: replace})
+		fatal(cfg.Save())
+		fmt.Printf("eklendi: %q → %q\n", match, replace)
+	case "remove":
+		if len(args) < 2 {
+			fmt.Fprintln(os.Stderr, "kullanım: dictatego dict remove <öğe>")
+			os.Exit(2)
+		}
+		kept := cfg.Dictionary[:0]
+		found := false
+		for _, p := range cfg.Dictionary {
+			if p.Match == args[1] {
+				found = true
+				continue
+			}
+			kept = append(kept, p)
+		}
+		if !found {
+			fmt.Printf("yok: %q\n", args[1])
+			return
+		}
+		n := len(kept)
+		// slice reuse keeps capacity; rebuild to be safe with aliasing
+		kept = append([]config.Pair(nil), kept...)
+		cfg.Dictionary = kept
+		fatal(cfg.Save())
+		fmt.Printf("çıkarıldı: %q (kalan %d öğe)\n", args[1], n)
+	default:
+		fmt.Fprintln(os.Stderr, "kullanım: dictatego dict <list|add|remove> ...")
+		os.Exit(2)
+	}
+}
+
+func runDictList(cfg *config.Config) {
+	if len(cfg.Dictionary) == 0 {
+		fmt.Println("sözlük boş")
+		return
+	}
+	for _, p := range cfg.Dictionary {
+		fmt.Printf("%q → %q\n", p.Match, p.Replace)
+	}
 }
 
 // runDaemon starts the IPC daemon: Hyprland binds then plain execs.

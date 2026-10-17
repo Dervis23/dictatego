@@ -8,14 +8,15 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 
 	"fyne.io/systray"
 )
 
-// Colors match the reference's painted tray dot.
+// Colors for the user's chosen tray scheme.
 var (
-	idleColor   = color.RGBA{R: 154, G: 160, B: 170, A: 255} // #9aa0aa
-	activeColor = color.RGBA{R: 240, G: 78, B: 82, A: 255}   // #f04e52
+	idleColor   = color.RGBA{R: 158, G: 158, B: 158, A: 255} // nötr gri #9e9e9e
+	activeColor = color.RGBA{R: 255, G: 152, B: 0, A: 255}   // turuncu #ff9800
 )
 
 // Handler connects the tray to the engine.
@@ -74,25 +75,50 @@ func (h *Handler) SetActive(active bool) {
 	}
 }
 
-// dotIcon paints a 32×32 filled circle like the reference's QPainter dot.
+// dotIcon paints the user's state scheme on a 32×32 transparent canvas:
+// inactive → tiny gray circle (16px diameter), recording → orange square
+// (20×20, stop-button look).
 func dotIcon(active bool) []byte {
 	c := idleColor
 	if active {
 		c = activeColor
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 32, 32))
-	for y := 0; y < 32; y++ {
-		for x := 0; x < 32; x++ {
-			// Antialiased edge via a simple coverage ramp.
-			dx, dy := float64(x)-15.5, float64(y)-15.5
-			dist := dx*dx + dy*dy
-			switch {
-			case dist <= 144: // radius 12 fully inside
-				img.Set(x, y, c)
-			case dist <= 272: // fade to radius ~16.5
-				t := (272 - dist) / 128
-				faded := color.RGBA{R: c.R, G: c.G, B: c.B, A: uint8(float64(c.A) * t)}
-				img.Set(x, y, faded)
+	paint := func(cov float64, x, y int) {
+		if cov <= 0 || x < 0 || y < 0 || x >= 32 || y >= 32 {
+			return
+		}
+		if cov > 1 {
+			cov = 1
+		}
+		img.SetRGBA(x, y, color.RGBA{R: c.R, G: c.G, B: c.B, A: uint8(255 * cov)})
+	}
+	if !active {
+		// minik daire: merkez (16,16), yarıçap 8, AA kenar
+		for y := 0; y < 32; y++ {
+			for x := 0; x < 32; x++ {
+				d := math.Hypot(float64(x)+0.5-16, float64(y)+0.5-16) - 8
+				paint(0.5-d, x, y)
+			}
+		}
+	} else {
+		// turuncu kare: 20×20, merkez (16,16), 3px köşe yuvarlama
+		const x0, y0, x1, y1, r = 6.0, 6.0, 26.0, 26.0, 3.0
+		for y := 5; y <= 27; y++ {
+			for x := 5; x <= 27; x++ {
+				fx, fy := float64(x)+0.5, float64(y)+0.5
+				cxr := math.Max(x0+r, math.Min(fx, x1-r))
+				cyr := math.Max(y0+r, math.Min(fy, y1-r))
+				d := math.Hypot(fx-cxr, fy-cyr) - r
+				inside := fx >= x0 && fx <= x1 && fy >= y0 && fy <= y1
+				cov := 0.0
+				switch {
+				case inside && d >= -0.5:
+					cov = 0.5 - d
+				case inside:
+					cov = 1
+				}
+				paint(cov, x, y)
 			}
 		}
 	}

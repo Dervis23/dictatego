@@ -79,9 +79,11 @@ bekliyor (bind sorunu çözülürse opsiyonel olur).
 - [x] engine: durum makinesi (idle→recording→finishing) + toggle/stop/cancel/status
 - [x] cli: `run` (daemon), `toggle`, `stop`, `cancel`, `status`, `paste` komutları
 - [x] notify: notify-send ile durum/hata bildirimleri (engine içinde)
-- [x] tray: StatusNotifierItem (fyne.io/systray, saf DBus) — gri/kırmızı ikon,
-      "Kaydı Başlat/Durdur" + "Çıkış" menüsü — kullanıcı ortamında doğrulandı ✔
+- [x] tray: StatusNotifierItem (fyne.io/systray, saf DBus) — "Kaydı Başlat/Durdur" +
+      "Çıkış" menüsü — kullanıcı ortamında doğrulandı ✔
       (Not: Linux'ta gerçek kayıt systray.Run() event loop'unda; Register() yetmez)
+      İkon (kullanıcı seçimi): boşta minik gri daire (#9e9e9e, 16px),
+      kayıtta turuncu kare (#ff9800, 20×20)
 - Kullanıcı kendi Hyprland bind'larını kendisi ayarlayacak (install-hyprland gereksiz)
 - [ ] çeviri modu daemon üzerinden (config'den language okur)
 
