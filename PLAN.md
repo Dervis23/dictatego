@@ -84,7 +84,10 @@ bekliyor (bind sorunu çözülürse opsiyonel olur).
       (Not: Linux'ta gerçek kayıt systray.Run() event loop'unda; Register() yetmez)
       İkon (kullanıcı seçimi): boşta minik gri daire (#9e9e9e, 16px),
       kayıtta turuncu kare (#ff9800, 20×20)
-- Kullanıcı kendi Hyprland bind'larını kendisi ayarlayacak (install-hyprland gereksiz)
+3. Kullanıcı kendi Hyprland bind'larını kendisi ayarladı. Karar 2026-10-17:
+   Hyprland 0.55+ Lua config'e geçti (~/.config/hypr/hyprland.lua) — README +
+   install.sh çıktılarında `hl.bind("ALT + Z", hl.dsp.exec_cmd("dictatego toggle"))`
+   formatı veriliyor; eski hyprlang `.conf` birkaç sürüm daha geçerli.
 - [x] ayar komutları: `set language|mode|style|microphone` + `get` + `dict add|remove|list`
       (kullanıcı config.json elle düzenlemiyor; engine her kayıtta config'i yeniden okur)
 - [x] çeviri modu daemon üzerinden (config'den language okur) — engine artık

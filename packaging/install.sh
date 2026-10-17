@@ -37,17 +37,31 @@ cat <<EOF
 
 == Kurulum tamam ==
 
-Hyprland configine şunu ekle (ya da systemd unit kullan):
+Hyprland 0.55+ Lua configine (~/.config/hypr/hyprland.lua) şunu ekle
+(ya da systemd unit kullan):
 
-  exec-once = dictatego run
-  # kayıt için:
-  bind = ALT, Z, exec, dictatego toggle
-  # iptal için:
-  bind = ALT, X, exec, dictatego cancel
+  -- daemon + tray: otomatik başlat
+  hl.exec_cmd("dictatego run")
+
+  -- kayıt başlat/bitir-yapıştır
+  hl.bind("ALT + Z", hl.dsp.exec_cmd("dictatego toggle"))
+
+  -- iptal
+  hl.bind("ALT + X", hl.dsp.exec_cmd("dictatego cancel"))
+
+  -- eski hyprlang .conf kullanıyorsan karşılıkları:
+  --   exec-once = dictatego run
+  --   bind = ALT, Z, exec, dictatego toggle
+  --   bind = ALT, X, exec, dictatego cancel
+
+Sway:
+  exec dictatego run
+  bindsym $mod+z exec dictatego toggle
+  bindsym $mod+x exec dictatego cancel
 
 Ayar için:
-  dictatego set language tr    # çeviri modu
-  dictatego set mode verbatim  # birebir transkripsiyon
+  dictatego set language tr      # çeviri modu
+  dictatego set mode verbatim    # birebir transkripsiyon
   dictatego set microphone <ad>  # devices komutuyla gör
   dictatego dict add "Gemini" "Yeni Gemini"
 

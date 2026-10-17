@@ -56,12 +56,31 @@ sunucusu (`libnotify`). `ydotool` opsiyoneldir (daemonı çalışmalı).
 | `dictatego key` | API anahtarı durumunu göster |
 | `dictatego record` | daemon'sız hızlı test |
 
-### Hyprland örnek bind
+### Hyprland örnek bind — Lua konfig (0.55+)
+
+`~/.config/hypr/hyprland.lua`:
+
+```lua
+-- daemon + tray: otomatik başlat
+hl.exec_cmd("dictatego run")
+
+-- kayıt başlat/bitir-yapıştır
+hl.bind("ALT + Z", hl.dsp.exec_cmd("dictatego toggle"))
+
+-- iptal
+hl.bind("ALT + X", hl.dsp.exec_cmd("dictatego cancel"))
+```
+
+> Not: Hyprland 0.55'ten beri konfig Lua'dır (`hyprland.lua`); eski
+> `hyprlang` `.conf` yalnızca birkaç sürüm daha çalışır, geçirmen önerilir:
+> `bind = ALT, Z, exec, dictatego toggle` (eski `.conf` karşılığı).
+
+### Sway (hyprlang tabanlı sway config)
 
 ```
-exec-once = dictatego run
-bind = ALT, Z, exec, dictatego toggle
-bind = ALT, X, exec, dictatego cancel
+exec dictatego run
+bindsym $mod+z exec dictatego toggle
+bindsym $mod+x exec dictatego cancel
 ```
 
 ### systemd (opsiyonel)
