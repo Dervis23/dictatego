@@ -94,7 +94,7 @@ systemctl --user enable --now dictatego.service
 ## Ayarlar & API anahtarı
 
 Config: `~/.config/dictatego/config.json` (**0600** izinli — içinde API
-anahtarı var). Alanlar referans uygulamayla uyumlu:
+anahtarı var). Ayar alanları:
 
 ```json
 {
