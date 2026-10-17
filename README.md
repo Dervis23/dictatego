@@ -4,8 +4,7 @@ Wayland (wlroots / Hyprland / Sway) diktasyon uygulaması. Kısayol tuşuna bas 
 konuş → transkript **odaklı pencereye yapıştırılır**. Tek binary, tray ikonu,
 daemon mimarisi.
 
-Python ile yazılmış `gemini_speech` referans projenin Go ile yeniden yazımıdır;
-[rapor](plan/rapor-referans.md)'taki eksikler giderilerek tasarlandı.
+
 
 ## Nasıl çalışır
 
